@@ -20,7 +20,7 @@ class PythonHMM(object):
         --> Initialize Transition probabilities
         --> Initialize Emission probabilities
         --> Initialize starting and stopping weighs 
-        """
+        """        
         self.data = {}
         self.data_matrix = None
         self.K = num_states # number of states
@@ -72,6 +72,18 @@ class PythonHMM(object):
         denom = (2*pi*var)**.5
         num = math.exp(-(float(symbol)-float(mean))**2/(2*var))
         return num/denom
+
+    def _checkPosteriorTransision(self,t):
+        """
+        Sanity Check ! for debug purposes !! Must remove later !
+        """
+        s=0
+
+        for i in range(1,self.K+1):
+            for j in range(1,self.K+1):
+                s = s+ self.posterior_transition_trellis[1][(t,t+1,j,i)]
+
+        return s
             
     def _initializeMatrices(self):
         """
@@ -90,7 +102,8 @@ class PythonHMM(object):
             rand_initial_prob = list(rand_initial_prob[0,:])                        
 
             for j in range(K):
-                self.state_transition_mat[(i+1,j+1)] = rand_initial_prob[j]
+                self.state_transition_mat[(j+1,i+1)] = rand_initial_prob[j]
+
 
         # Initialize the symbol distribution Parameters ui and si (Assuming a numeric outputs ! Modelled using a gaussian ! withmean ui and std si)
         init_mean = np.mean(self.data_matrix)
@@ -119,7 +132,10 @@ class PythonHMM(object):
                 likelihood = self.posterior_state_trellis[n][(T,i)]
                 tot_log_lik = tot_log_lik + likelihood
 
-            total_log_lik = math.log(likelihood) 
+            try:
+                total_log_lik = math.log(likelihood) 
+            except ValueError:
+                ipdb.set_trace()
                 
             for t in range(1,self.T):
                 scale_factor = self.forward_scaling_vector[n][t] 
@@ -154,7 +170,6 @@ class PythonHMM(object):
                 # Compute total 
                 self.state_transition_mat[(j,i)] = (s/den)
 
-
     def _updateInitialProbabilities(self):
         """
         Update the initial probabilities after observing multiple instances
@@ -185,7 +200,6 @@ class PythonHMM(object):
                     den = den + pos_prob                    
         
             self.state_symbol_prob[i]['std'] = math.pow(num/den,0.5)
-
 
     def _updateSymbolDistributionMean(self):
         """
@@ -228,6 +242,7 @@ class PythonHMM(object):
                     prob = num/den
                     self.posterior_state_trellis[Ni][(t,i)] = prob
 
+
     def computePosteriorTransition(self):
         """
         Compute Posterior Distribution for all transitions (i,j) for a given observation !!
@@ -240,11 +255,11 @@ class PythonHMM(object):
 
             # Compute Posterior transitions !
             for t in range(1,self.T):                                
+                all_total =  0
+                pair_prob = {}
+                
                 for i in range(1,K+1): # for each state ! 
-                    alpha_ti = self.forward_trellis[Ni][(t,i)]                    
-                    
-                    prob_vector = []
-                    total = 0
+                    alpha_ti = self.forward_trellis[Ni][(t,i)]                                        
                     for j in range(1,K+1): # for each state ! 
                         # Compute normalizing constant for all Possible transitions !!
                         beta_tplusone_j = self.backward_trellis[Ni][(t+1,j)]
@@ -252,12 +267,12 @@ class PythonHMM(object):
                         symbol_prob =  self._normpdf(self.data[(Ni,t+1)],j)
 
                         cur_prod = alpha_ti * beta_tplusone_j * p_j_i * symbol_prob
-                        prob_vector.append(cur_prod)
-                        total = total+symbol_prob
+                        pair_prob[(j,i)]= cur_prod 
+                        all_total = all_total + cur_prod
                         
-                    for j in range(1,K+1): # for each state ! 
-                        self.posterior_transition_trellis[Ni][(t,t+1,j,i)] =  prob_vector[j-1]/total                           
-                      
+                for each_pair, score in pair_prob.iteritems(): # for each state !                     
+                    self.posterior_transition_trellis[Ni][(t,t+1,each_pair[0],each_pair[1])] = score/all_total             
+        
     def forwardAlgorithm(self):
         """
         Compute forward Probability
@@ -373,9 +388,7 @@ class PythonHMM(object):
             self._updateInitialProbabilities()
             self._updateSymbolDistributionMean()
             self._updateSymbolDistributionVariance()
-
-
-            
+           
 
 if __name__=="__main__":
     model = PythonHMM(5)
