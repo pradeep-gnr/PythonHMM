@@ -9,7 +9,7 @@ import math
 from random import gauss
 
 input_file = sys.argv[1]
-op_pkl = open(sys.argv[2],"rb")
+op_pkl = open(sys.argv[2],"wb")
 
 class PythonHMM(object):
     """
