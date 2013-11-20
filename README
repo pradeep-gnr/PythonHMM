@@ -9,7 +9,12 @@ A Python implementation of the Hidden Markov Model algorithm
 #### To run ####
 Required : numpy
 
-python HMM.py ip.csv op.pkl
+python HMM.py ip.csv op.pkl 
+
+ip.csv - input_file
+op.pkl - pickled model with parameters in a dictionary format !
+
+(OR)
 
 model = PythonHMM(K) # where K is the number of states in the HMM
 model.trainHMM()
