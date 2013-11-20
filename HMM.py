@@ -4,10 +4,12 @@ import os
 import numpy as np
 import ipdb
 import csv
+import cPickle
 import math
 from random import gauss
 
 input_file = sys.argv[1]
+op_pkl = open(sys.argv[2],"rb")
 
 class PythonHMM(object):
     """
@@ -122,18 +124,19 @@ class PythonHMM(object):
         T = self.T
         K= self.K        
         final_likelihood = 0
+        total_log_lik = 0
         
         for n in range(1,self.N+1):
             # Compute total Likelihood for all Instances P(x1...xn / theta) 
-            tot_log_lik = 0
+            tot_lik = 0
             tot_scale_factor = 0
             
             for i in range(1,self.K+1):        
                 likelihood = self.posterior_state_trellis[n][(T,i)]
-                tot_log_lik = tot_log_lik + likelihood
+                tot_lik = tot_lik + likelihood
 
             try:
-                total_log_lik = math.log(likelihood) 
+                total_log_lik = math.log(tot_lik) 
             except ValueError:
                 ipdb.set_trace()
                 
@@ -141,7 +144,7 @@ class PythonHMM(object):
                 scale_factor = self.forward_scaling_vector[n][t] 
                 tot_scale_factor = tot_scale_factor + math.log(scale_factor)
 
-            final_likelihood = final_likelihood + (tot_log_lik - tot_scale_factor)
+            final_likelihood = final_likelihood + (total_log_lik - tot_scale_factor)
 
         return final_likelihood
         
@@ -371,7 +374,6 @@ class PythonHMM(object):
         
         for i in range(1,num_iterations):
 
-            print i
             # Run new Iteration !
             self.forwardAlgorithm()
             self.backwardAlgorithm()
@@ -379,16 +381,25 @@ class PythonHMM(object):
             # Compute Posterior probabilities !!
             self.computePosteriorStateDist()
             self.computePosteriorTransition()
-
+            
             # Get current Likelihood !!
-            print self._getCurrentPosteriorLikelihood()           
+            post_likelihood= self._getCurrentPosteriorLikelihood()           
+
+            print "Iteration=%s, Posterior Likelihood =%s "%(i,post_likelihood)
                         
             # Update model !
             self._updateTransitionMatrix()
             self._updateInitialProbabilities()
             self._updateSymbolDistributionMean()
             self._updateSymbolDistributionVariance()
-           
+
+        # Pickle parameters to File !!
+        self.model['init_state_probabilities'] = self.state_initial_prob
+        self.model['state_transition_prob'] = self.state_transition_mat
+        self.model['symbol_emission_parameters'] = self.symbol_prob
+
+        cPickle.dump(self.model,op_pkl)
+        # Done           
 
 if __name__=="__main__":
     model = PythonHMM(5)
