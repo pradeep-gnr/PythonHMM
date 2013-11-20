@@ -4,4 +4,25 @@ A Python implementation of the Hidden Markov Model algorithm
 
 #### Current State ###
 
---> Basic code updated (Code not working -- in progress)
+--> Basic code updated for HMM Training. Yet to add decoding and other HMM capabilities
+
+#### To run ####
+Required : numpy
+
+python HMM.py ip.csv op.pkl
+
+model = PythonHMM(K) # where K is the number of states in the HMM
+model.trainHMM()
+
+#### Input format ####
+
+The model is currently built for numeric time series data. Each line in the input file must be comma seperated for each time slot.For example
+
+1,2,3,4,5,3
+4,5,6,7,8,3
+2,3,4,5,6,4
+2,2,3,4,5,5
+1,4,5,2,1,5
+
+The example denotes a time series input consisting of (N=5) data vectors and (T=6) distinct time slots. 
+
