@@ -111,18 +111,21 @@ class PythonHMM(object):
         final_likelihood = 0
         
         for n in range(1,self.N+1):
+            # Compute total Likelihood for all Instances P(x1...xn / theta) 
             tot_log_lik = 0
             tot_scale_factor = 0
             
             for i in range(1,self.K+1):        
                 likelihood = self.posterior_state_trellis[n][(T,i)]
-                tot_log_lik = tot_log_lik + math.log(likelihood)
+                tot_log_lik = tot_log_lik + likelihood
+
+            total_log_lik = math.log(likelihood) 
                 
             for t in range(1,self.T):
                 scale_factor = self.forward_scaling_vector[n][t] 
                 tot_scale_factor = tot_scale_factor + math.log(scale_factor)
 
-            final_likelihood = final_likelihood + (tot_log_lik - tot_scale_factor )
+            final_likelihood = final_likelihood + (tot_log_lik - tot_scale_factor)
 
         return final_likelihood
         
@@ -136,7 +139,7 @@ class PythonHMM(object):
 
         for i in range(1,self.K+1):
             den = 0
-            for t in range(1,self.T+1):
+            for t in range(1,self.T):
                 for n in range(1,N+1):
                     den = den + self.posterior_state_trellis[n][(t,i)]
                     
@@ -159,22 +162,22 @@ class PythonHMM(object):
         N = self.N
         K = self.K
 
-        for i in range(1,self.K):
+        for i in range(1,self.K+1):
             s = 0
             updated_prob = 0
             for n in range(1,self.N+1):
                 s = s+1
-                updated_prob = updated_prob + self.posterior_state_trellis[(1,i)]
+                updated_prob = updated_prob + self.posterior_state_trellis[n][(1,i)]
             self.state_initial_prob[i] = (updated_prob/s)
 
     def _updateSymbolDistributionVariance(self):
         # Update the Variance of the Gaussian         
-        for i in range(1,self.K): # for each state
+        for i in range(1,self.K+1): # for each state
             num = 0
             den = 0
             cur_mean =  self.state_symbol_prob[i]['mean']
             for n in range(1,self.N+1): # for all observarions 
-                for t in range(1,self.T): # for all time intervals !                   
+                for t in range(1,self.T+1): # for all time intervals !                   
                     pos_prob = self.posterior_state_trellis[n][(t,i)]                    
                     data_value =  self.data[(n,t)]
                     new_var = math.pow((data_value-cur_mean),2) 
@@ -189,11 +192,11 @@ class PythonHMM(object):
         Update the emission probability parameters for each of the states !!!
         """ 
         # Update the mean of the Gaussian 
-        for i in range(1,self.K):
+        for i in range(1,self.K+1):
             num = 0
             den = 0
             for n in range(1,self.N+1):
-                for t in range(1,self.T):
+                for t in range(1,self.T+1):
                     pos_prob = self.posterior_state_trellis[n][(t,i)]
                     data_value =  self.data[(n,t)]
                     num = num + (pos_prob*data_value)
@@ -229,7 +232,6 @@ class PythonHMM(object):
         """
         Compute Posterior Distribution for all transitions (i,j) for a given observation !!
         """
-        ipdb.set_trace()
         T=self.T
         K=self.K
 
@@ -254,7 +256,7 @@ class PythonHMM(object):
                         total = total+symbol_prob
                         
                     for j in range(1,K+1): # for each state ! 
-                        self.posterior_transition_trellis[Ni][(t,t+1,i,j)] =  prob_vector[j]/total                           
+                        self.posterior_transition_trellis[Ni][(t,t+1,j,i)] =  prob_vector[j-1]/total                           
                       
     def forwardAlgorithm(self):
         """
@@ -353,7 +355,8 @@ class PythonHMM(object):
         L_iterations = [] #Keep track of the likelihood across all iterations !! Must converge !!
         
         for i in range(1,num_iterations):
-            
+
+            print i
             # Run new Iteration !
             self.forwardAlgorithm()
             self.backwardAlgorithm()
